@@ -4,6 +4,7 @@
 #include <cmath>
 #include <map>
 #include <algorithm>
+#include <fstream>
  
 // Features: {age, income_in_thousands}
 // Play Tennis, encoded:
@@ -48,6 +49,8 @@ float entropy(std::vector<int> labels){
     
     return result;
 }
+
+
 
 //information_gain = entropy(before split) − weighted_average(entropy(after split))
 float information_gain(std::vector<std::vector<float>> X, std::vector<int> y, int feature_index, float threshold){
@@ -200,6 +203,97 @@ void print_tree(const Node& node, int depth){
         print_tree(tree[node.right_child_index], depth + 1);
     }
 }
+//shifts each subtree's internally-numbered rows by however many rows come before them once merged
+//points the parent at exactly where those shifted blocks land — turning two self-consistent-but-separate lists into one correctly-connected table.
+    std::vector<Node> flatten_tree(const Node& root){
+    std::vector<Node> flattened;
+    if (root.is_leaf) {
+        flattened.push_back(root);
+        return flattened;
+    }
+
+    Node root_copy = root;
+    flattened.push_back(root_copy);   // root_copy lives at index 0 of THIS list
+
+    std::vector<Node> left_part = flatten_tree(tree[root.left_child_index]);
+    std::vector<Node> right_part = flatten_tree(tree[root.right_child_index]);
+
+    int left_offset = flattened.size();                        // = 1
+    int right_offset = flattened.size() + left_part.size();    // = 1 + left_part.size()
+
+    for (Node& n : left_part) {
+        if (!n.is_leaf) {
+            n.left_child_index += left_offset;
+            n.right_child_index += left_offset;
+        }
+    }
+    for (Node& n : right_part) {
+        if (!n.is_leaf) {
+            n.left_child_index += right_offset;
+            n.right_child_index += right_offset;
+        }
+    }
+
+    flattened[0].left_child_index = left_offset;
+    flattened[0].right_child_index = right_offset;
+
+    flattened.insert(flattened.end(), left_part.begin(), left_part.end());
+    flattened.insert(flattened.end(), right_part.begin(), right_part.end());
+
+    return flattened;
+}
+
+void export_vh(const std::vector<Node>& flat, const std::string& filepath){
+    std::ofstream file(filepath);
+    int n = flat.size();
+
+    file << "`ifndef DECISION_TREE_VH\n`define DECISION_TREE_VH\n\n";
+    file << "parameter int NUM_NODES = " << n << ";\n\n";
+
+    file << "localparam int feature_idx [0:NUM_NODES-1] = '{";
+    for (int i = 0; i < n; i++) {
+        file << (flat[i].is_leaf ? -1 : flat[i].feature_index);
+        if (i != n - 1) file << ", ";
+    }
+    file << "};\n";
+
+    file << "localparam int threshold [0:NUM_NODES-1] = '{";
+    for (int i = 0; i < n; i++) {
+        file << (flat[i].is_leaf ? -1 : (int)flat[i].threshold);
+        if (i != n - 1) file << ", ";
+    }
+    file << "};\n";
+
+    file << "localparam int left_idx [0:NUM_NODES-1] = '{";
+    for (int i = 0; i < n; i++) {
+        file << (flat[i].is_leaf ? -1 : flat[i].left_child_index);
+        if (i != n - 1) file << ", ";
+    }
+    file << "};\n";
+
+    file << "localparam int right_idx [0:NUM_NODES-1] = '{";
+    for (int i = 0; i < n; i++) {
+        file << (flat[i].is_leaf ? -1 : flat[i].right_child_index);
+        if (i != n - 1) file << ", ";
+    }
+    file << "};\n";
+
+    file << "localparam int is_leaf [0:NUM_NODES-1] = '{";
+    for (int i = 0; i < n; i++) {
+        file << (flat[i].is_leaf ? 1 : 0);
+        if (i != n - 1) file << ", ";
+    }
+    file << "};\n";
+
+    file << "localparam int leaf_value [0:NUM_NODES-1] = '{";
+    for (int i = 0; i < n; i++) {
+        file << (flat[i].is_leaf ? flat[i].leaf_value : -1);
+        if (i != n - 1) file << ", ";
+    }
+    file << "};\n\n`endif\n";
+
+    file.close();
+}
 
 int main(){
     std::vector<std::vector<float>> X_full = {
@@ -239,7 +333,15 @@ int main(){
                    << (y_test[i] == 1 ? "Yes" : "No")
                    << (match ? "" : " -- wrong") << "\n";
     }
-    std::cout << correct << "/" << X_test.size() << " correct on holdout\n";
+    std::cout << correct << "/" << X_test.size() << " correct on holdout\n\n";
+
+    // retrain on all 14 rows for the version we actually ship, now that holdout confirmed the approach works
+    tree.clear();
+    Node final_root = build_tree(X_full, y_full, 2, 0, 5, 0.5f);
+    print_tree(final_root, 0);
+
+    std::vector<Node> flat = flatten_tree(final_root);
+    export_vh(flat, "decision_tree.vh");
 
     return 0;
 }
