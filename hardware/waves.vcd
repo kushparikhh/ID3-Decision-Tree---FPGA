@@ -1,0 +1,163 @@
+$date
+	Mon Jul 27 18:27:06 2026
+$end
+$version
+	Icarus Verilog
+$end
+$timescale
+	1s
+$end
+$scope module testbench $end
+$var wire 1 ! result $end
+$var reg 8 " features_packed [7:0] $end
+$scope module dut $end
+$var wire 8 # features_packed [7:0] $end
+$var reg 2 $ cur_feature_idx [1:0] $end
+$var reg 1 % cur_is_leaf $end
+$var reg 2 & cur_threshold [1:0] $end
+$var reg 1 ! result $end
+$var reg 2 ' this_feature_val [1:0] $end
+$scope begin $ivl_for_loop0 $end
+$var integer 32 ( i [31:0] $end
+$upscope $end
+$upscope $end
+$scope begin $ivl_for_loop1 $end
+$var integer 32 ) row [31:0] $end
+$upscope $end
+$upscope $end
+$enddefinitions $end
+$comment Show the parameter values. $end
+$dumpall
+$end
+#0
+$dumpvars
+b0 )
+b111 (
+b0 '
+b0 &
+1%
+b0 $
+b0 #
+b0 "
+0!
+$end
+#1
+1%
+b0 &
+b0 $
+b111 (
+b1000000 "
+b1000000 #
+b1 )
+#2
+1!
+b1 '
+1%
+b0 &
+b0 $
+b111 (
+b1 "
+b1 #
+b10 )
+#3
+b10 '
+1%
+b0 &
+b0 $
+b111 (
+b110 "
+b110 #
+b11 )
+#4
+b10 '
+1%
+b0 &
+b0 $
+b111 (
+b11010 "
+b11010 #
+b100 )
+#5
+b10 '
+1%
+b0 &
+b0 $
+b111 (
+b1011010 "
+b1011010 #
+b101 )
+#6
+b1 '
+1%
+b0 &
+b0 $
+b111 (
+b1011001 "
+b1011001 #
+b110 )
+#7
+0!
+b0 '
+1%
+b0 &
+b0 $
+b111 (
+b100 "
+b100 #
+b111 )
+#8
+1!
+b0 '
+1%
+b0 &
+b0 $
+b111 (
+b11000 "
+b11000 #
+b1000 )
+#9
+b10 '
+1%
+b0 &
+b0 $
+b111 (
+b10110 "
+b10110 #
+b1001 )
+#10
+b0 '
+1%
+b0 &
+b0 $
+b111 (
+b1010100 "
+b1010100 #
+b1010 )
+#11
+b1 '
+1%
+b0 &
+b0 $
+b111 (
+b1000101 "
+b1000101 #
+b1011 )
+#12
+1%
+b0 &
+b0 $
+b111 (
+b10001 "
+b10001 #
+b1100 )
+#13
+b10 '
+1%
+b0 &
+b0 $
+b111 (
+b1000110 "
+b1000110 #
+b1101 )
+#14
+b1110 )
