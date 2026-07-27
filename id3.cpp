@@ -243,58 +243,42 @@ void print_tree(const Node& node, int depth){
     return flattened;
 }
 
-void export_vh(const std::vector<Node>& flat, const std::string& filepath){
+void export_vh(const std::vector<Node>& flat, int num_features, const std::string& filepath){
+    int n = (int)flat.size();
+
+    int feature_bits   = std::max(1, (int)std::ceil(std::log2(std::max(2, num_features))));
+    int row_bits       = std::max(1, (int)std::ceil(std::log2(std::max(2, n))));
+
+    int max_threshold = 0;
+    for (auto& nd : flat) if (!nd.is_leaf) max_threshold = std::max(max_threshold, (int)nd.threshold);
+    int threshold_bits = std::max(1, (int)std::ceil(std::log2(std::max(2, max_threshold + 1))));
+
     std::ofstream file(filepath);
-    int n = flat.size();
-
     file << "`ifndef DECISION_TREE_VH\n`define DECISION_TREE_VH\n\n";
-    file << "parameter int NUM_NODES = " << n << ";\n\n";
+    file << "localparam int NUM_NODES = " << n << ";\n";
+    file << "localparam int FEATURE_BITS = " << feature_bits << ";\n";
+    file << "localparam int THRESHOLD_BITS = " << threshold_bits << ";\n";
+    file << "localparam int ROW_BITS = " << row_bits << ";\n\n";
 
-    file << "localparam int feature_idx [0:NUM_NODES-1] = '{";
-    for (int i = 0; i < n; i++) {
-        file << (flat[i].is_leaf ? -1 : flat[i].feature_index);
-        if (i != n - 1) file << ", ";
-    }
-    file << "};\n";
+    auto pack_field = [&](const std::string& name, int bits, auto getter){
+        file << "localparam [" << (bits * n - 1) << ":0] " << name << " = {";
+        for (int i = n - 1; i >= 0; i--) {
+            file << bits << "'d" << getter(flat[i]);
+            if (i != 0) file << ", ";
+        }
+        file << "};\n";
+    };
 
-    file << "localparam int threshold [0:NUM_NODES-1] = '{";
-    for (int i = 0; i < n; i++) {
-        file << (flat[i].is_leaf ? -1 : (int)flat[i].threshold);
-        if (i != n - 1) file << ", ";
-    }
-    file << "};\n";
+    pack_field("feature_idx_packed", feature_bits,   [](const Node& nd){ return nd.is_leaf ? 0 : nd.feature_index; });
+    pack_field("threshold_packed",   threshold_bits,  [](const Node& nd){ return nd.is_leaf ? 0 : (int)nd.threshold; });
+    pack_field("left_idx_packed",    row_bits,        [](const Node& nd){ return nd.is_leaf ? 0 : nd.left_child_index; });
+    pack_field("right_idx_packed",   row_bits,        [](const Node& nd){ return nd.is_leaf ? 0 : nd.right_child_index; });
+    pack_field("is_leaf_packed",     1,               [](const Node& nd){ return nd.is_leaf ? 1 : 0; });
+    pack_field("leaf_value_packed",  1,               [](const Node& nd){ return nd.is_leaf ? nd.leaf_value : 0; });
 
-    file << "localparam int left_idx [0:NUM_NODES-1] = '{";
-    for (int i = 0; i < n; i++) {
-        file << (flat[i].is_leaf ? -1 : flat[i].left_child_index);
-        if (i != n - 1) file << ", ";
-    }
-    file << "};\n";
-
-    file << "localparam int right_idx [0:NUM_NODES-1] = '{";
-    for (int i = 0; i < n; i++) {
-        file << (flat[i].is_leaf ? -1 : flat[i].right_child_index);
-        if (i != n - 1) file << ", ";
-    }
-    file << "};\n";
-
-    file << "localparam int is_leaf [0:NUM_NODES-1] = '{";
-    for (int i = 0; i < n; i++) {
-        file << (flat[i].is_leaf ? 1 : 0);
-        if (i != n - 1) file << ", ";
-    }
-    file << "};\n";
-
-    file << "localparam int leaf_value [0:NUM_NODES-1] = '{";
-    for (int i = 0; i < n; i++) {
-        file << (flat[i].is_leaf ? flat[i].leaf_value : -1);
-        if (i != n - 1) file << ", ";
-    }
-    file << "};\n\n`endif\n";
-
+    file << "\n`endif\n";
     file.close();
 }
-
 int main(){
     std::vector<std::vector<float>> X_full = {
         {0,0,0,0}, {0,0,0,1}, {1,0,0,0}, {2,1,0,0}, {2,2,1,0},
@@ -341,7 +325,7 @@ int main(){
     print_tree(final_root, 0);
 
     std::vector<Node> flat = flatten_tree(final_root);
-    export_vh(flat, "decision_tree.vh");
+    export_vh(flat, 4, "decision_tree.vh");
 
     return 0;
 }
